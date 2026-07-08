@@ -53,7 +53,7 @@ func (r *wishlistRepository) Create(ctx context.Context, name string) (*models.W
 	}
 
 	var existing int
-	err = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM wish_lists WHERE wish_list_name = $1", name).Scan(&existing)
+	err = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM wish_lists WHERE LOWER(wish_list_name) = LOWER($1)", name).Scan(&existing)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +178,7 @@ func (r *wishlistRepository) Update(ctx context.Context, id string, name string)
 	}
 
 	var count int
-	err = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM wish_lists WHERE wish_list_name = $1 AND wish_list_id != $2", name, id).Scan(&count)
+	err = r.db.QueryRow(ctx, "SELECT COUNT(*) FROM wish_lists WHERE LOWER(wish_list_name) = LOWER($1) AND wish_list_id != $2", name, id).Scan(&count)
 	if err != nil {
 		return nil, err
 	}
