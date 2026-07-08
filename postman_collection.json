@@ -1,162 +1,68 @@
 {
   "info": {
-    "name": "TapInvest Wishlist API",
+    "name": "TapInvest Wishlist API - QA Testing",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "wishlistId",
+      "value": "ENTER_UUID_HERE",
+      "type": "string"
+    },
+    {
+      "key": "bondIsin",
+      "value": "ENTER_ISIN_HERE",
+      "type": "string"
+    }
+  ],
   "item": [
     {
-      "name": "Health Check",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:8080/api/health",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "8080",
-          "path": [
-            "api",
-            "health"
-          ]
-        }
-      }
-    },
-    {
-      "name": "Get All Bonds",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "http://localhost:8080/api/bonds",
-          "protocol": "http",
-          "host": [
-            "localhost"
-          ],
-          "port": "8080",
-          "path": [
-            "api",
-            "bonds"
-          ]
-        }
-      }
-    },
-    {
-      "name": "Wishlists",
+      "name": "0. Setup & Base",
       "item": [
         {
-          "name": "Create Wishlist",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"name\": \"My High Yield Bonds\"\n}"
-            },
-            "url": {
-              "raw": "http://localhost:8080/api/wishlists",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "api",
-                "wishlists"
-              ]
-            }
-          }
-        },
-        {
-          "name": "Get Wishlists",
+          "name": "Health Check",
           "request": {
             "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "http://localhost:8080/api/wishlists",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "api",
-                "wishlists"
-              ]
-            }
+            "url": "{{baseUrl}}/health"
           }
         },
         {
-          "name": "Get Wishlist Detail",
+          "name": "Get All Bonds (with sorting)",
           "request": {
             "method": "GET",
-            "header": [],
             "url": {
-              "raw": "http://localhost:8080/api/wishlists/1",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "api",
-                "wishlists",
-                "1"
+              "raw": "{{baseUrl}}/bond?sortBy=bondYield&sortOrder=desc",
+              "host": ["{{baseUrl}}"],
+              "path": ["bond"],
+              "query": [
+                { "key": "sortBy", "value": "bondYield" },
+                { "key": "sortOrder", "value": "desc" }
               ]
             }
           }
         },
         {
-          "name": "Rename Wishlist",
+          "name": "Get All Wishlists",
           "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"name\": \"Updated Wishlist\"\n}"
-            },
-            "url": {
-              "raw": "http://localhost:8080/api/wishlists/1",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "api",
-                "wishlists",
-                "1"
-              ]
-            }
+            "method": "GET",
+            "url": "{{baseUrl}}/wishlist"
           }
         },
         {
-          "name": "Delete Wishlist",
+          "name": "Get Wishlist Details (with sorting)",
           "request": {
-            "method": "DELETE",
-            "header": [],
+            "method": "GET",
             "url": {
-              "raw": "http://localhost:8080/api/wishlists/1",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "api",
-                "wishlists",
-                "1"
+              "raw": "{{baseUrl}}/wishlist/{{wishlistId}}?sortBy=addedRecently",
+              "host": ["{{baseUrl}}"],
+              "path": ["wishlist", "{{wishlistId}}"],
+              "query": [
+                { "key": "sortBy", "value": "addedRecently" }
               ]
             }
           }
@@ -164,58 +70,159 @@
       ]
     },
     {
-      "name": "Wishlist Items",
+      "name": "1. Wishlist Creation & Naming (QA 1 & 7)",
+      "item": [
+        {
+          "name": "Create Wishlist (Valid)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"name\": \"My High Yield Bonds\"}" },
+            "url": "{{baseUrl}}/wishlist"
+          }
+        },
+        {
+          "name": "Create Wishlist (Empty Name)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"name\": \"\"}" },
+            "url": "{{baseUrl}}/wishlist"
+          }
+        },
+        {
+          "name": "Create Wishlist (Emoji/Special Chars)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"name\": \"Retirement 🏖️ $$$!\"}" },
+            "url": "{{baseUrl}}/wishlist"
+          }
+        },
+        {
+          "name": "Create Wishlist (Too Long > 50 Chars)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"name\": \"This wishlist name is definitely way more than fifty characters long\"}" },
+            "url": "{{baseUrl}}/wishlist"
+          }
+        },
+        {
+          "name": "Create Wishlist (Duplicate Name)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"name\": \"My High Yield Bonds\"}" },
+            "url": "{{baseUrl}}/wishlist"
+          }
+        },
+        {
+          "name": "Rename Wishlist (To Duplicate)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"name\": \"My High Yield Bonds\"}" },
+            "url": "{{baseUrl}}/wishlist/{{wishlistId}}"
+          }
+        },
+        {
+          "name": "Delete Wishlist",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/wishlist/{{wishlistId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Bond Operations & Limits (QA 3 & 4 & 9)",
       "item": [
         {
           "name": "Add Bond to Wishlist",
           "request": {
             "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"isin\": \"IN0020180026\"\n}"
-            },
-            "url": {
-              "raw": "http://localhost:8080/api/wishlists/1/items",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "api",
-                "wishlists",
-                "1",
-                "items"
-              ]
-            }
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"bondIsin\": \"{{bondIsin}}\"}" },
+            "url": "{{baseUrl}}/wishlist/{{wishlistId}}/bond"
+          }
+        },
+        {
+          "name": "Add Bond (Duplicate)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"bondIsin\": \"{{bondIsin}}\"}" },
+            "url": "{{baseUrl}}/wishlist/{{wishlistId}}/bond"
+          }
+        },
+        {
+          "name": "Set Bond Color",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"color\": \"#FF5733\"}" },
+            "url": "{{baseUrl}}/wishlist/{{wishlistId}}/bond/{{bondIsin}}/color"
+          }
+        },
+        {
+          "name": "Set Bond Position",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"position\": 1}" },
+            "url": "{{baseUrl}}/wishlist/{{wishlistId}}/bond/{{bondIsin}}/position"
+          }
+        },
+        {
+          "name": "Set Bond Pin Status",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"isPinned\": true}" },
+            "url": "{{baseUrl}}/wishlist/{{wishlistId}}/bond/{{bondIsin}}/pin"
+          }
+        },
+        {
+          "name": "Bulk Reorder Bonds",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"bondIsins\": [\n    \"ISIN_1\",\n    \"ISIN_2\"\n  ]\n}" },
+            "url": "{{baseUrl}}/wishlist/{{wishlistId}}/reorder"
           }
         },
         {
           "name": "Remove Bond from Wishlist",
           "request": {
             "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "http://localhost:8080/api/wishlists/1/items/IN0020180026",
-              "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8080",
-              "path": [
-                "api",
-                "wishlists",
-                "1",
-                "items",
-                "IN0020180026"
-              ]
-            }
+            "url": "{{baseUrl}}/wishlist/{{wishlistId}}/bond/{{bondIsin}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Search Functionality (QA 11)",
+      "item": [
+        {
+          "name": "Search Bonds (Valid)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/bond/search?q=HDFC"
+          }
+        },
+        {
+          "name": "Search Bonds (Empty/Garbage)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/bond/search?q=trash_input_123"
+          }
+        },
+        {
+          "name": "Search Bonds (Emojis/Special Chars)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/bond/search?q=$$$🏖️"
           }
         }
       ]

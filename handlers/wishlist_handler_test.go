@@ -9,6 +9,7 @@ import (
 	"tapinvest_api/models"
 	"tapinvest_api/repository"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -24,21 +25,25 @@ func (m *mockWishlistRepo) Create(ctx context.Context, name string) (*models.Wis
 	if m.createErr != nil {
 		return nil, m.createErr
 	}
-	return &models.Wishlist{WishListID: 1, WishListName: name}, nil
+	return &models.Wishlist{WishListID: "123e4567-e89b-12d3-a456-426614174000", WishListName: name, CreatedAt: time.Now(), UpdatedAt: time.Now()}, nil
 }
 func (m *mockWishlistRepo) GetAll(ctx context.Context) ([]models.WishlistResponse, error) { return nil, nil }
-func (m *mockWishlistRepo) GetByID(ctx context.Context, id int) (*models.WishlistDetailResponse, error) { return nil, nil }
-func (m *mockWishlistRepo) Update(ctx context.Context, id int, name string) (*models.Wishlist, error) { return nil, nil }
-func (m *mockWishlistRepo) Delete(ctx context.Context, id int) error { return nil }
-func (m *mockWishlistRepo) AddBond(ctx context.Context, wishlistID int, isin string) error { return m.addErr }
-func (m *mockWishlistRepo) RemoveBond(ctx context.Context, wishlistID int, isin string) error { return nil }
+func (m *mockWishlistRepo) GetByID(ctx context.Context, id string, sortBy string) (*models.WishlistDetailResponse, error) { return nil, nil }
+func (m *mockWishlistRepo) Update(ctx context.Context, id string, name string) (*models.Wishlist, error) { return nil, nil }
+func (m *mockWishlistRepo) Delete(ctx context.Context, id string) error { return nil }
+func (m *mockWishlistRepo) AddBond(ctx context.Context, wishlistID string, isin string) error { return m.addErr }
+func (m *mockWishlistRepo) RemoveBond(ctx context.Context, wishlistID string, isin string) error { return nil }
+func (m *mockWishlistRepo) SetBondColor(ctx context.Context, wishlistID string, isin string, color *string) error { return nil }
+func (m *mockWishlistRepo) SetBondPosition(ctx context.Context, wishlistID string, isin string, position int) error { return nil }
+func (m *mockWishlistRepo) SetBondPin(ctx context.Context, wishlistID string, isin string, isPinned bool) error { return nil }
+func (m *mockWishlistRepo) ReorderBonds(ctx context.Context, wishlistID string, bondIsins []string) error { return nil }
 
 func setupRouter(repo repository.WishlistRepository) *gin.Engine {
 	gin.SetMode(gin.TestMode)
 	r := gin.Default()
 	handler := NewWishlistHandler(repo)
 	r.POST("/wishlists", handler.CreateWishlist)
-	r.POST("/wishlists/:wishlistId/items", handler.AddBond)
+	r.POST("/wishlists/:wishlistId/bond", handler.AddBond)
 	return r
 }
 
@@ -99,8 +104,8 @@ func TestWishlistHandler_AddBond(t *testing.T) {
 	repo := &mockWishlistRepo{addErr: repository.ErrBondDuplicate}
 	router := setupRouter(repo)
 
-	body, _ := json.Marshal(map[string]string{"isin": "IN123456789"})
-	req, _ := http.NewRequest(http.MethodPost, "/wishlists/1/items", bytes.NewBuffer(body))
+	body, _ := json.Marshal(map[string]string{"bondIsin": "IN123456789"})
+	req, _ := http.NewRequest(http.MethodPost, "/wishlists/123e4567-e89b-12d3-a456-426614174000/bond", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	
 	w := httptest.NewRecorder()

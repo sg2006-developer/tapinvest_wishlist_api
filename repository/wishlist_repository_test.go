@@ -50,7 +50,7 @@ func TestWishlistRepository_LimitsAndDuplicates(t *testing.T) {
 	}
 
 	// 1. Create 5 wishlists (Limit testing)
-	var createdIds []int
+	var createdIds []string
 	for i := 1; i <= 5; i++ {
 		w, err := repo.Create(ctx, fmt.Sprintf("TEST_QA_Wishlist_%d", i))
 		require.NoError(t, err)

@@ -2,11 +2,11 @@ package handlers
 
 import (
 	"net/http"
-	"strconv"
 	"tapinvest_api/repository"
 	"tapinvest_api/utils"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type WishlistHandler struct {
@@ -19,6 +19,11 @@ func NewWishlistHandler(r repository.WishlistRepository) *WishlistHandler {
 
 type CreateWishlistRequest struct {
 	Name string `json:"name" binding:"required"`
+}
+
+func isValidUUID(u string) bool {
+	_, err := uuid.Parse(u)
+	return err == nil
 }
 
 func (h *WishlistHandler) CreateWishlist(c *gin.Context) {
@@ -57,14 +62,15 @@ func (h *WishlistHandler) GetWishlists(c *gin.Context) {
 }
 
 func (h *WishlistHandler) GetWishlistDetail(c *gin.Context) {
-	idStr := c.Param("wishlistId")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid wishlist ID", nil)
+	id := c.Param("wishlistId")
+	if !isValidUUID(id) {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid UUID.", nil)
 		return
 	}
 
-	wishlist, err := h.repo.GetByID(c.Request.Context(), id)
+	sortBy := c.DefaultQuery("sortBy", "manual")
+
+	wishlist, err := h.repo.GetByID(c.Request.Context(), id, sortBy)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if err == repository.ErrWishlistNotFound {
@@ -81,10 +87,9 @@ type UpdateWishlistRequest struct {
 }
 
 func (h *WishlistHandler) RenameWishlist(c *gin.Context) {
-	idStr := c.Param("wishlistId")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid wishlist ID", nil)
+	id := c.Param("wishlistId")
+	if !isValidUUID(id) {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid UUID.", nil)
 		return
 	}
 
@@ -115,14 +120,13 @@ func (h *WishlistHandler) RenameWishlist(c *gin.Context) {
 }
 
 func (h *WishlistHandler) DeleteWishlist(c *gin.Context) {
-	idStr := c.Param("wishlistId")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid wishlist ID", nil)
+	id := c.Param("wishlistId")
+	if !isValidUUID(id) {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid UUID.", nil)
 		return
 	}
 
-	err = h.repo.Delete(c.Request.Context(), id)
+	err := h.repo.Delete(c.Request.Context(), id)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if err == repository.ErrWishlistNotFound {
@@ -135,14 +139,13 @@ func (h *WishlistHandler) DeleteWishlist(c *gin.Context) {
 }
 
 type AddBondRequest struct {
-	Isin string `json:"isin" binding:"required"`
+	BondIsin string `json:"bondIsin" binding:"required"`
 }
 
 func (h *WishlistHandler) AddBond(c *gin.Context) {
-	idStr := c.Param("wishlistId")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid wishlist ID", nil)
+	id := c.Param("wishlistId")
+	if !isValidUUID(id) {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid UUID.", nil)
 		return
 	}
 
@@ -152,7 +155,7 @@ func (h *WishlistHandler) AddBond(c *gin.Context) {
 		return
 	}
 
-	err = h.repo.AddBond(c.Request.Context(), id, req.Isin)
+	err := h.repo.AddBond(c.Request.Context(), id, req.BondIsin)
 	if err != nil {
 		status := http.StatusInternalServerError
 		switch err {
@@ -168,10 +171,9 @@ func (h *WishlistHandler) AddBond(c *gin.Context) {
 }
 
 func (h *WishlistHandler) RemoveBond(c *gin.Context) {
-	idStr := c.Param("wishlistId")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid wishlist ID", nil)
+	id := c.Param("wishlistId")
+	if !isValidUUID(id) {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid UUID.", nil)
 		return
 	}
 
@@ -181,10 +183,145 @@ func (h *WishlistHandler) RemoveBond(c *gin.Context) {
 		return
 	}
 
-	err = h.repo.RemoveBond(c.Request.Context(), id, isin)
+	err := h.repo.RemoveBond(c.Request.Context(), id, isin)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to remove bond from wishlist", err.Error())
+		status := http.StatusInternalServerError
+		if err == repository.ErrWishlistNotFound {
+			status = http.StatusNotFound
+		}
+		utils.ErrorResponse(c, status, "Failed to remove bond from wishlist", err.Error())
 		return
 	}
 	utils.SuccessResponse(c, http.StatusOK, "Bond removed from wishlist successfully", nil)
+}
+
+type ColorRequest struct {
+	Color *string `json:"color"`
+}
+
+func (h *WishlistHandler) SetBondColor(c *gin.Context) {
+	id := c.Param("wishlistId")
+	if !isValidUUID(id) {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid UUID.", nil)
+		return
+	}
+
+	isin := c.Param("bondIsin")
+	var req ColorRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid request body.", err.Error())
+		return
+	}
+
+	err := h.repo.SetBondColor(c.Request.Context(), id, isin, req.Color)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if err == repository.ErrWishlistNotFound {
+			status = http.StatusNotFound
+		}
+		utils.ErrorResponse(c, status, "Failed to set bond color", err.Error())
+		return
+	}
+	utils.SuccessResponse(c, http.StatusOK, "Bond color updated successfully", nil)
+}
+
+type PositionRequest struct {
+	Position *int `json:"position" binding:"required"`
+}
+
+func (h *WishlistHandler) SetBondPosition(c *gin.Context) {
+	id := c.Param("wishlistId")
+	if !isValidUUID(id) {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid UUID.", nil)
+		return
+	}
+
+	isin := c.Param("bondIsin")
+	var req PositionRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, "position must be a non-negative integer.", err.Error())
+		return
+	}
+
+	if *req.Position < 0 {
+		utils.ErrorResponse(c, http.StatusBadRequest, "position must be a non-negative integer.", nil)
+		return
+	}
+
+	err := h.repo.SetBondPosition(c.Request.Context(), id, isin, *req.Position)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if err == repository.ErrWishlistNotFound {
+			status = http.StatusNotFound
+		}
+		utils.ErrorResponse(c, status, "Failed to set bond position", err.Error())
+		return
+	}
+	utils.SuccessResponse(c, http.StatusOK, "Bond position updated successfully", nil)
+}
+
+type PinRequest struct {
+	IsPinned *bool `json:"isPinned"`
+}
+
+func (h *WishlistHandler) SetBondPin(c *gin.Context) {
+	id := c.Param("wishlistId")
+	if !isValidUUID(id) {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid UUID.", nil)
+		return
+	}
+
+	isin := c.Param("bondIsin")
+	var req PinRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, "isPinned must be a boolean.", err.Error())
+		return
+	}
+
+	pinned := false
+	if req.IsPinned != nil {
+		pinned = *req.IsPinned
+	}
+
+	err := h.repo.SetBondPin(c.Request.Context(), id, isin, pinned)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if err == repository.ErrWishlistNotFound {
+			status = http.StatusNotFound
+		}
+		utils.ErrorResponse(c, status, "Failed to pin/unpin bond", err.Error())
+		return
+	}
+	utils.SuccessResponse(c, http.StatusOK, "Bond pin status updated successfully", nil)
+}
+
+type ReorderRequest struct {
+	BondIsins []string `json:"bondIsins" binding:"required"`
+}
+
+func (h *WishlistHandler) ReorderBonds(c *gin.Context) {
+	id := c.Param("wishlistId")
+	if !isValidUUID(id) {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid UUID.", nil)
+		return
+	}
+
+	var req ReorderRequest
+	if err := c.ShouldBindJSON(&req); err != nil || len(req.BondIsins) == 0 {
+		utils.ErrorResponse(c, http.StatusBadRequest, "bondIsins is required and must be a non-empty array.", err.Error())
+		return
+	}
+
+	err := h.repo.ReorderBonds(c.Request.Context(), id, req.BondIsins)
+	if err != nil {
+		status := http.StatusInternalServerError
+		if err.Error() == "bondIsins must contain all N bonds in the wishlist" || err.Error() == "one or more bondIsins do not exist in this wishlist" {
+			status = http.StatusBadRequest
+		} else if err == repository.ErrWishlistNotFound {
+			status = http.StatusNotFound
+		}
+		utils.ErrorResponse(c, status, "Failed to reorder bonds", err.Error())
+		return
+	}
+	utils.SuccessResponse(c, http.StatusOK, "Bonds reordered successfully", nil)
 }

@@ -1,18 +1,27 @@
 package models
 
+import "time"
+
 type Wishlist struct {
-	WishListID   int    `json:"wish_list_id"`
-	WishListName string `json:"wish_list_name"`
+	WishListID   string    `json:"id"`
+	WishListName string    `json:"name"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
 type WishlistResponse struct {
-	WishListID   int    `json:"wish_list_id"`
-	WishListName string `json:"wish_list_name"`
-	BondCount    int    `json:"bond_count"`
+	WishListID   string    `json:"id"`
+	WishListName string    `json:"name"`
+	BondCount    int       `json:"bondCount"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
 type WishlistDetailResponse struct {
-	WishListID   int    `json:"wish_list_id"`
-	WishListName string `json:"wish_list_name"`
-	Bonds        []Bond `json:"bonds"`
+	WishListID   string    `json:"id"`
+	WishListName string    `json:"name"`
+	BondCount    int       `json:"bondCount"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
+	Bonds        []Bond    `json:"bonds"`
 }
