@@ -1,0 +1,224 @@
+{
+  "info": {
+    "name": "TapInvest Wishlist API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/health",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "health"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get All Bonds",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:8080/api/bonds",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "8080",
+          "path": [
+            "api",
+            "bonds"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Wishlists",
+      "item": [
+        {
+          "name": "Create Wishlist",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"My High Yield Bonds\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/wishlists",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "wishlists"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Wishlists",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/wishlists",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "wishlists"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Wishlist Detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/wishlists/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "wishlists",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Rename Wishlist",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Wishlist\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/wishlists/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "wishlists",
+                "1"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Wishlist",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/wishlists/1",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "wishlists",
+                "1"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wishlist Items",
+      "item": [
+        {
+          "name": "Add Bond to Wishlist",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"isin\": \"IN0020180026\"\n}"
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/wishlists/1/items",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "wishlists",
+                "1",
+                "items"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Remove Bond from Wishlist",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/wishlists/1/items/IN0020180026",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "wishlists",
+                "1",
+                "items",
+                "IN0020180026"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
