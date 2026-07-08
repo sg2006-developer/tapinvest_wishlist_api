@@ -1,35 +1,89 @@
-# Architecture & Implementation Overview
-*A high-level summary of the TapInvest backend architecture and design decisions.*
+# Technical Architecture & Codebase Guide
+*A comprehensive deep-dive for technical managers to understand the structure, routing, and design decisions of the TapInvest Wishlist API.*
 
-## 1. What is the tech stack?
-The backend is built in **Go (Golang)** using the **Gin Web Framework**. We chose Gin because it's extremely fast, lightweight, and perfect for building high-performance REST APIs. 
+---
 
-For the database, we are using **PostgreSQL** connected via the **pgxpool** driver. Instead of using a bulky ORM like GORM, we use `pgx` directly to write highly optimized, raw SQL queries. This gives us maximum performance and control, especially for complex sorting operations.
+## 1. Directory Structure & File Purposes
 
-## 2. How is the code organized? (The Flow)
-The application follows a standard **Controller-Repository** architectural pattern:
-1. **`routes/routes.go`**: This is the "Traffic Cop." It maps incoming URLs (like `GET /api/v1/bond`) to specific handler functions.
-2. **`handlers/`**: These are the "Translators." They take the HTTP request, parse the JSON or query parameters, call the Repository for data, and then format the response back into JSON for the frontend.
-3. **`repository/`**: This is the "Database layer." All SQL queries live here. Handlers do not talk to the database directly; they only ask the Repository to fetch or save data.
-4. **`models/`**: These are the "Blueprints." They define the shapes of our Go structs (like `Bond` or `Wishlist`) so the backend knows what the data looks like.
+The codebase strictly follows a **Clean Architecture** (specifically the Controller-Repository pattern). This ensures a strong separation of concerns: routing is separated from HTTP parsing, which is separated from database logic.
 
-## 3. Why did we change Wishlist IDs to UUIDs?
-Previously, wishlists used simple integer IDs (1, 2, 3...). We migrated these to **UUIDs** (Universally Unique Identifiers) for security and scalability.
-- **Security**: Integer IDs make it easy for malicious users to scrape data by simply guessing IDs (e.g., `/wishlist/4`, `/wishlist/5`). UUIDs are cryptographically random and impossible to guess.
-- **Scalability**: If we ever decide to use a distributed database, UUIDs prevent ID collisions across multiple servers.
+```text
+Tap_invest_api2/
+├── main.go                  # Application Entry Point
+├── .env                     # Environment variables (DB credentials)
+├── db/
+│   ├── schema.sql           # Original DB schema backup
+│   └── new_schema.sql       # Current schema used for the 'wish' database
+├── models/                  # Domain Entities & DTOs
+│   ├── bond.go
+│   ├── wishisin.go
+│   └── wishlist.go
+├── routes/
+│   └── routes.go            # Router & Endpoint mappings
+├── handlers/                # HTTP Controllers (Request/Response)
+│   ├── bond_handler.go
+│   ├── wishlist_handler.go
+│   └── health_handler.go
+└── repository/              # Data Access Layer (SQL)
+    ├── bond_repository.go
+    └── wishlist_repository.go
+```
 
-## 4. How does the Fuzzy Search work?
-We implemented a true fuzzy search for bonds (`/api/v1/bond/search`). 
-Instead of relying on basic substring matching, we enabled the **`pg_trgm`** (Trigram) extension inside PostgreSQL. 
-- **Why?** It breaks words down into 3-letter chunks (trigrams) to measure string similarity. If a user mistypes "HDFX" instead of "HDFC", the system calculates a similarity score and still returns the correct bond. This dramatically improves the User Experience (UX).
+### Breakdown of Folders & Files:
 
-## 5. How does Sorting & Pinning work?
-We do all sorting directly in the database using SQL `ORDER BY` clauses rather than sorting lists in memory (which is much faster).
-- When a user asks to sort a wishlist by "Yield", the database query looks like this: `ORDER BY is_pinned DESC, yield DESC, position ASC`.
-- **The Rule**: `is_pinned DESC` is *always* injected as the first sorting priority. This guarantees that pinned items always float to the top of the frontend UI, regardless of what other sorting mode the user clicks on.
+#### 1. `main.go`
+- **Purpose**: The absolute entry point of the app.
+- **What it does**: It loads the `.env` file, initializes the PostgreSQL connection pool using `pgxpool`, passes that pool into the Repositories, injects those Repositories into the Handlers, mounts the `routes.go` router, and starts the HTTP server.
 
-## 6. How does Drag-and-Drop Reordering work?
-Instead of the frontend making 10 separate API calls when a user drags a bond to a new position, we built a **Bulk Reorder Endpoint** (`PATCH /api/v1/wishlist/:id/reorder`).
-- The frontend sends one array of ISINs in their new desired order.
-- The backend wraps the entire update in a **Database Transaction**. It updates the `position` of all bonds simultaneously.
-- **Why?** If the server crashes halfway through updating positions, the transaction rolls back. This guarantees the list order never gets corrupted or ends up with duplicate positions.
+#### 2. `routes/routes.go`
+- **Purpose**: The "Switchboard" of the API.
+- **What it does**: This is where you can see exactly which URL maps to which function. For example, it defines that `PATCH /api/v1/wishlist/:wishlistId/bond/:bondIsin/color` is handled by `WishlistHandler.SetBondColor`. **(If your manager asks "Where is the API defined?", point them here).**
+
+#### 3. `handlers/` (The HTTP Layer)
+- **Purpose**: Input validation and output formatting.
+- **What it does**: Files here (`bond_handler.go` and `wishlist_handler.go`) take an incoming HTTP request, parse the JSON body or URL parameters (e.g., verifying a UUID is valid), and call the Repository. They contain **zero SQL**. They just format the repository's result into the `{ "data": ... }` JSON envelope and return standard HTTP status codes (200, 400, 404).
+
+#### 4. `repository/` (The Database Layer)
+- **Purpose**: Raw data retrieval and persistence.
+- **What it does**: Files here (`bond_repository.go` and `wishlist_repository.go`) contain all the actual SQL queries. Handlers call these files, and these files talk to Postgres. 
+
+#### 5. `models/`
+- **Purpose**: Blueprints.
+- **What it does**: Contains Go `structs`. These structs dictate the exact JSON `camelCase` keys that the frontend receives (e.g., `bondYield`) and provide the memory structure for scanning SQL rows.
+
+---
+
+## 2. Request Lifecycle (How Data Flows)
+
+If your manager asks **"How does the code work when a request comes in?"**, explain this flow using the *Bulk Reorder* endpoint as an example:
+
+1. **Client Sends Request**: `PATCH /api/v1/wishlist/123e4567.../reorder` with a JSON array of ISINs.
+2. **Router (`routes.go`)**: Sees `PATCH .../reorder` and forwards it to `WishlistHandler.ReorderBonds`.
+3. **Handler (`wishlist_handler.go`)**: 
+   - Validates the `wishlistId` is a real UUID.
+   - Binds the JSON body to a Go struct to ensure the array isn't empty.
+   - Calls `repository.ReorderBonds(id, isins)`.
+4. **Repository (`wishlist_repository.go`)**:
+   - Opens a Database Transaction (`BEGIN`).
+   - Checks if all ISINs exist and if the count matches the DB exactly.
+   - Loops through the array and runs `UPDATE` SQL statements to set the `position` integer.
+   - Commits the transaction (`COMMIT`) and returns success to the handler.
+5. **Handler**: Sends a `200 OK` back to the client.
+
+---
+
+## 3. Key Technical Decisions to Highlight
+
+When having a technical discussion, these are the architectural wins you should mention:
+
+1. **Why `pgx` instead of an ORM (like GORM)?**
+   - We chose to write raw SQL using the `pgxpool` driver because it is significantly faster and gives us absolute control over complex `ORDER BY` clauses. ORMs struggle with complex tie-breaker sorting (like `is_pinned DESC, color ASC NULLS LAST, position ASC`), but raw SQL handles it flawlessly.
+
+2. **Database Transactions (`tx.Begin()`)**
+   - For endpoints that modify multiple rows at once (like Bulk Reordering bonds), we wrap the SQL in a transaction. If the server crashes on the 5th bond update out of 10, the database rolls back the entire request, ensuring the wishlist's order is never corrupted.
+
+3. **Trigram Fuzzy Search (`pg_trgm`)**
+   - In `bond_repository.go`, the search function doesn't just do basic `LIKE` matching. We enabled the `pg_trgm` extension in Postgres. This breaks search terms into 3-letter combinations (n-grams) to calculate a `similarity()` score. It makes the API typo-tolerant (searching "HDFX" finds "HDFC") and ranks the best matches first.
+
+4. **Security via UUIDs**
+   - We migrated wishlist primary keys from auto-incrementing integers (`1, 2, 3`) to UUIDs (`123e4567-e89b...`). This prevents Insecure Direct Object Reference (IDOR) vulnerabilities, as attackers cannot simply guess the next wishlist ID to scrape data.
